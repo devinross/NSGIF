@@ -108,8 +108,7 @@
 	NSString *timeEncodedFileName = [NSString stringWithFormat:@"%@-%lu.gif", fileName, (unsigned long)([[NSDate date] timeIntervalSince1970]*10.0)];
 	NSString *temporaryFile = [NSTemporaryDirectory() stringByAppendingString:timeEncodedFileName];
 	NSURL *fileURL = [NSURL fileURLWithPath:temporaryFile];
-	if (fileURL == nil)
-		return nil;
+	if (fileURL == nil) return nil;
 	
 	CGImageDestinationRef destination = CGImageDestinationCreateWithURL((__bridge CFURLRef)fileURL, kUTTypeGIF , frameCount, NULL);
 	CGImageDestinationSetProperties(destination, (CFDictionaryRef)fileProp);
@@ -122,32 +121,23 @@
 	generator.requestedTimeToleranceBefore = tol;
 	generator.requestedTimeToleranceAfter = tol;
 	
-	@autoreleasepool {
-		NSError *error = nil;
-		CGImageRef previousImageRefCopy = nil;
-		for (NSValue *time in timePoints) {
+	NSError *error = nil;
+	CGImageRef previousImageRefCopy = nil;
+	for (NSValue *time in timePoints) {
+		@autoreleasepool {
 			
 			TKLog(@"FRAME AT: %@",time);
-			CGImageRef imageRef;
-			
-			
-#if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-			
-			imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
-			
+			CGImageRef imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
 				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
 			}
-			
 			if(!CGSizeEqualToSize(CGSizeZero, outputSize)){
 				imageRef = createImageAtSize(imageRef,outputSize);
 			}else if(scale != 1.0){
 				imageRef = createImageWithScale(imageRef, scale);
 			}
 			
-#elif TARGET_OS_MAC
-			imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
-#endif
+
 			
 			if (error) {
 				NSLog(@"Error copying image: %@", error);
@@ -163,21 +153,23 @@
 			}
 			CGImageDestinationAddImage(destination, imageRef, (CFDictionaryRef)frameProp);
 			CGImageRelease(imageRef);
+	
+			
 		}
-		CGImageRelease(previousImageRefCopy);
-		
-		// Finalize the GIF
-		if (!CGImageDestinationFinalize(destination)) {
-			NSLog(@"Failed to finalize GIF destination: %@", error);
-			if (destination != nil) {
-				CFRelease(destination);
-			}
-			return nil;
-		}
-		CFRelease(destination);
 	}
 	
 	
+	CGImageRelease(previousImageRefCopy);
+	
+	// Finalize the GIF
+	if (!CGImageDestinationFinalize(destination)) {
+		NSLog(@"Failed to finalize GIF destination: %@", error);
+		if (destination != nil) {
+			CFRelease(destination);
+		}
+		return nil;
+	}
+	CFRelease(destination);
 	
 	return fileURL;
 }
