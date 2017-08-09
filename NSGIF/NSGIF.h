@@ -25,6 +25,7 @@
 
 + (void) createGIFfromURL:(NSURL*)videoURL framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock;
 
++ (void) createGIFfromURL:(NSURL*)videoURL scale:(CGFloat)scale framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock;
 
 + (void) createImagefromVideoURL:(NSURL*)videoURL completion:(void(^)(UIImage *image))completionBlock;
 

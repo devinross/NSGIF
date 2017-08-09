@@ -20,7 +20,7 @@
 
 
 // ALL TOGETHER
-+ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
++ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize scale:(CGFloat)scale framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
 	
 	// Convert the video at the given URL to a GIF, and return the GIF's URL if it was created.
 	// The frames are spaced evenly over the video, and each has the same duration.
@@ -51,7 +51,7 @@
 	
 	__block NSURL *gifURL;
 	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-		gifURL = [self dr_createGIFforTimePoints:points URL:videoURL fileProperties:fileProp frameProperties:frameProp frames:frames cropRect:crop outputSize:outputSize];
+		gifURL = [self dr_createGIFforTimePoints:points URL:videoURL fileProperties:fileProp frameProperties:frameProp frames:frames cropRect:crop scale:scale outputSize:outputSize];
 		dispatch_group_leave(gifQueue);
 	});
 	
@@ -61,11 +61,19 @@
 	
 }
 
++ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock{
+	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:outputSize scale:1.0 framesPerSecond:fps loop:loop completion:completionBlock];
+}
+
 + (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
-	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:CGSizeZero framesPerSecond:fps loop:loop completion:completionBlock];
+	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:CGSizeZero scale:1.0 framesPerSecond:fps loop:loop completion:completionBlock];
 }
 + (void) createGIFfromURL:(NSURL*)videoURL framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
-	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero framesPerSecond:fps loop:loop completion:completionBlock];
+	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero scale:1.0 framesPerSecond:fps loop:loop completion:completionBlock];
+}
+
++ (void) createGIFfromURL:(NSURL*)videoURL scale:(CGFloat)scale framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock {
+	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero scale:scale framesPerSecond:fps loop:loop completion:completionBlock];
 }
 
 + (void) createImagefromVideoURL:(NSURL*)videoURL completion:(void(^)(UIImage *image))completionBlock {
@@ -95,7 +103,7 @@
 }
 
 
-+ (NSURL *) dr_createGIFforTimePoints:(NSArray *)timePoints URL:(NSURL *)url fileProperties:(NSDictionary *)fileProp frameProperties:(NSDictionary *)frameProp frames:(NSInteger)frameCount cropRect:(CGRect)cropRect outputSize:(CGSize)outputSize{
++ (NSURL *) dr_createGIFforTimePoints:(NSArray *)timePoints URL:(NSURL *)url fileProperties:(NSDictionary *)fileProp frameProperties:(NSDictionary *)frameProp frames:(NSInteger)frameCount cropRect:(CGRect)cropRect scale:(CGFloat)scale outputSize:(CGSize)outputSize{
 	
 	NSString *timeEncodedFileName = [NSString stringWithFormat:@"%@-%lu.gif", fileName, (unsigned long)([[NSDate date] timeIntervalSince1970]*10.0)];
 	NSString *temporaryFile = [NSTemporaryDirectory() stringByAppendingString:timeEncodedFileName];
@@ -114,54 +122,62 @@
 	generator.requestedTimeToleranceBefore = tol;
 	generator.requestedTimeToleranceAfter = tol;
 	
-	NSError *error = nil;
-	CGImageRef previousImageRefCopy = nil;
-	for (NSValue *time in timePoints) {
-		CGImageRef imageRef;
-		
-		
+	@autoreleasepool {
+		NSError *error = nil;
+		CGImageRef previousImageRefCopy = nil;
+		for (NSValue *time in timePoints) {
+			
+			TKLog(@"FRAME AT: %@",time);
+			CGImageRef imageRef;
+			
+			
 #if TARGET_OS_IPHONE || TARGET_IPHONE_SIMULATOR
-		
-		imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
-		
-		if(!CGRectEqualToRect(CGRectZero, cropRect)){
-			imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
-		}
-		
-		if(!CGSizeEqualToSize(CGSizeZero, outputSize)){
-			imageRef = createImageAtSize(imageRef,outputSize);
-		}
-		
+			
+			imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
+			
+			if(!CGRectEqualToRect(CGRectZero, cropRect)){
+				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
+			}
+			
+			if(!CGSizeEqualToSize(CGSizeZero, outputSize)){
+				imageRef = createImageAtSize(imageRef,outputSize);
+			}else if(scale != 1.0){
+				imageRef = createImageWithScale(imageRef, scale);
+			}
+			
 #elif TARGET_OS_MAC
-		imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
+			imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
 #endif
-		
-		if (error) {
-			NSLog(@"Error copying image: %@", error);
+			
+			if (error) {
+				NSLog(@"Error copying image: %@", error);
+			}
+			if (imageRef) {
+				CGImageRelease(previousImageRefCopy);
+				previousImageRefCopy = CGImageCreateCopy(imageRef);
+			} else if (previousImageRefCopy) {
+				imageRef = CGImageCreateCopy(previousImageRefCopy);
+			} else {
+				NSLog(@"Error copying image and no previous frames to duplicate");
+				return nil;
+			}
+			CGImageDestinationAddImage(destination, imageRef, (CFDictionaryRef)frameProp);
+			CGImageRelease(imageRef);
 		}
-		if (imageRef) {
-			CGImageRelease(previousImageRefCopy);
-			previousImageRefCopy = CGImageCreateCopy(imageRef);
-		} else if (previousImageRefCopy) {
-			imageRef = CGImageCreateCopy(previousImageRefCopy);
-		} else {
-			NSLog(@"Error copying image and no previous frames to duplicate");
+		CGImageRelease(previousImageRefCopy);
+		
+		// Finalize the GIF
+		if (!CGImageDestinationFinalize(destination)) {
+			NSLog(@"Failed to finalize GIF destination: %@", error);
+			if (destination != nil) {
+				CFRelease(destination);
+			}
 			return nil;
 		}
-		CGImageDestinationAddImage(destination, imageRef, (CFDictionaryRef)frameProp);
-		CGImageRelease(imageRef);
+		CFRelease(destination);
 	}
-	CGImageRelease(previousImageRefCopy);
 	
-	// Finalize the GIF
-	if (!CGImageDestinationFinalize(destination)) {
-		NSLog(@"Failed to finalize GIF destination: %@", error);
-		if (destination != nil) {
-			CFRelease(destination);
-		}
-		return nil;
-	}
-	CFRelease(destination);
+	
 	
 	return fileURL;
 }
