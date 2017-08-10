@@ -81,28 +81,27 @@
 
 + (void) createImagefromVideoURL:(NSURL*)videoURL completion:(void(^)(UIImage *image))completionBlock {
 	
-	
-	AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:videoURL options:nil];
-	AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
-	generator.appliesPreferredTrackTransform = true;
-	CMTime thumbTime = CMTimeMakeWithSeconds(0,30);
-	
-	AVAssetImageGeneratorCompletionHandler handler = ^(CMTime requestedTime, CGImageRef image, CMTime actualTime, AVAssetImageGeneratorResult result, NSError *error){
-		if (result != AVAssetImageGeneratorSucceeded) {
-			NSLog(@"couldn't generate thumbnail, error:%@", error);
-		}
-		UIImage *img = [UIImage imageWithCGImage:image];
+	AVAsset *asset = [[AVURLAsset alloc] initWithURL:videoURL options:nil];
+	NSArray *requestedKeys = @[@"playable"];
+	[asset loadValuesAsynchronouslyForKeys:requestedKeys completionHandler: ^{
+
+
+		AVURLAsset *assetObj = [[AVURLAsset alloc] initWithURL:videoURL options:nil];
+		AVAssetImageGenerator *ImgObj = [[AVAssetImageGenerator alloc] initWithAsset:assetObj];
+		NSError *error = NULL;
+		CMTime time = CMTimeMake(1, 65);
+		CGImageRef refImg = [ImgObj copyCGImageAtTime:time actualTime:NULL error:&error];
+		NSLog(@"error==%@, Refimage==%@", error, refImg);
+		
+		UIImage *finalImage= [[UIImage alloc] initWithCGImage:refImg];
 		
 		dispatch_async(dispatch_get_main_queue(), ^{
-			completionBlock(img);
-
+			completionBlock(finalImage);
 		});
-	};
-	
-//	CGSize maxSize = CGSizeMake(320, 180);
-//	generator.maximumSize = maxSize;
-	[generator generateCGImagesAsynchronouslyForTimes:@[[NSValue valueWithCMTime:thumbTime]] completionHandler:handler];
 
+		
+	}];
+	
 }
 
 
