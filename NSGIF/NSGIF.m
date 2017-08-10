@@ -44,7 +44,7 @@
 	NSMutableArray *points = [NSMutableArray array];
 	for (int currentFrame = 0; currentFrame<frames; ++currentFrame) {
 		NSTimeInterval seconds = increment * currentFrame;
-		CMTime time = CMTimeMakeWithSeconds(seconds, [timeInterval intValue]);
+		CMTime time = CMTimeMakeWithSeconds(seconds, timeInterval.intValue);
 		[points addObject:[NSValue valueWithCMTime:time]];
 	}
 	
@@ -130,7 +130,6 @@
 	for (NSValue *time in timePoints) {
 		@autoreleasepool {
 			
-			TKLog(@"FRAME AT: %@",time);
 			CGImageRef imageRef = [generator copyCGImageAtTime:time.CMTimeValue actualTime:nil error:&error];
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
 				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
