@@ -19,7 +19,11 @@
 
 @interface NSGIF : NSObject
 
-+ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock;
++ (void) createGIFfromURL:(NSURL*)videoURL
+				 cropRect:(CGRect)crop
+			   outputSize:(CGSize)outputSize
+		  framesPerSecond:(NSInteger)fps
+					 loop:(NSInteger)loop progress:(void(^)(NSInteger currentFrame, NSInteger total))progressBlock completion:(void(^)(NSURL *gifURL))completionBlock;
 
 + (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock;
 

@@ -15,12 +15,15 @@
 
 
 #pragma mark - Public methods
-
-
-
-
 // ALL TOGETHER
-+ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize scale:(CGFloat)scale framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
++ (void) createGIFfromURL:(NSURL*)videoURL
+				 cropRect:(CGRect)crop
+			   outputSize:(CGSize)outputSize
+					scale:(CGFloat)scale
+		  framesPerSecond:(NSInteger)fps
+					 loop:(NSInteger)loop
+				 progress:(void(^)(NSInteger currentFrame, NSInteger total))progressBlock
+			   completion:(void(^)(NSURL *GifURL))completionBlock {
 	
 	// Convert the video at the given URL to a GIF, and return the GIF's URL if it was created.
 	// The frames are spaced evenly over the video, and each has the same duration.
@@ -51,7 +54,7 @@
 	
 	__block NSURL *gifURL;
 	dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-		gifURL = [self dr_createGIFforTimePoints:points URL:videoURL fileProperties:fileProp frameProperties:frameProp frames:frames cropRect:crop scale:scale outputSize:outputSize];
+		gifURL = [self dr_createGIFforTimePoints:points URL:videoURL fileProperties:fileProp frameProperties:frameProp frames:frames cropRect:crop scale:scale outputSize:outputSize progress:progressBlock];
 		dispatch_group_leave(gifQueue);
 	});
 	
@@ -61,19 +64,19 @@
 	
 }
 
-+ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock{
-	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:outputSize scale:1.0 framesPerSecond:fps loop:loop completion:completionBlock];
++ (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop outputSize:(CGSize)outputSize framesPerSecond:(NSInteger)fps loop:(NSInteger)loop progress:(void(^)(NSInteger currentFrame, NSInteger total))progressBlock completion:(void(^)(NSURL *gifURL))completionBlock{
+	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:outputSize scale:1.0 framesPerSecond:fps loop:loop progress:progressBlock completion:completionBlock];
 }
 
 + (void) createGIFfromURL:(NSURL*)videoURL cropRect:(CGRect)crop framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
-	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:CGSizeZero scale:1.0 framesPerSecond:fps loop:loop completion:completionBlock];
+	[NSGIF createGIFfromURL:videoURL cropRect:crop outputSize:CGSizeZero scale:1.0 framesPerSecond:fps loop:loop progress:nil completion:completionBlock];
 }
 + (void) createGIFfromURL:(NSURL*)videoURL framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *GifURL))completionBlock {
-	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero scale:1.0 framesPerSecond:fps loop:loop completion:completionBlock];
+	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero scale:1.0 framesPerSecond:fps loop:loop progress:nil completion:completionBlock];
 }
 
 + (void) createGIFfromURL:(NSURL*)videoURL scale:(CGFloat)scale framesPerSecond:(NSInteger)fps loop:(NSInteger)loop completion:(void(^)(NSURL *gifURL))completionBlock {
-	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero scale:scale framesPerSecond:fps loop:loop completion:completionBlock];
+	[NSGIF createGIFfromURL:videoURL cropRect:CGRectZero outputSize:CGSizeZero scale:scale framesPerSecond:fps loop:loop progress:nil completion:completionBlock];
 }
 
 + (void) createImagefromVideoURL:(NSURL*)videoURL completion:(void(^)(UIImage *image))completionBlock {
@@ -103,7 +106,7 @@
 }
 
 
-+ (NSURL *) dr_createGIFforTimePoints:(NSArray *)timePoints URL:(NSURL *)url fileProperties:(NSDictionary *)fileProp frameProperties:(NSDictionary *)frameProp frames:(NSInteger)frameCount cropRect:(CGRect)cropRect scale:(CGFloat)scale outputSize:(CGSize)outputSize{
++ (NSURL *) dr_createGIFforTimePoints:(NSArray *)timePoints URL:(NSURL *)url fileProperties:(NSDictionary *)fileProp frameProperties:(NSDictionary *)frameProp frames:(NSInteger)frameCount cropRect:(CGRect)cropRect scale:(CGFloat)scale outputSize:(CGSize)outputSize progress:(void(^)(NSInteger currentFrame, NSInteger total))progressBlock{
 	
 	NSString *timeEncodedFileName = [NSString stringWithFormat:@"%@-%lu.gif", fileName, (unsigned long)([[NSDate date] timeIntervalSince1970]*10.0)];
 	NSString *temporaryFile = [NSTemporaryDirectory() stringByAppendingString:timeEncodedFileName];
@@ -123,11 +126,12 @@
 	
 	NSError *error = nil;
 	CGImageRef previousImageRefCopy = nil;
+	NSInteger i = 0;
 	for (NSValue *time in timePoints) {
 		@autoreleasepool {
 			
 			TKLog(@"FRAME AT: %@",time);
-			CGImageRef imageRef = [generator copyCGImageAtTime:[time CMTimeValue] actualTime:nil error:&error];
+			CGImageRef imageRef = [generator copyCGImageAtTime:time.CMTimeValue actualTime:nil error:&error];
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
 				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
 			}
@@ -156,6 +160,11 @@
 	
 			
 		}
+	
+		
+		if(progressBlock)
+			progressBlock(i,timePoints.count);
+		i++;
 	}
 	
 	
