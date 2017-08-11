@@ -82,25 +82,17 @@
 + (void) createImagefromVideoURL:(NSURL*)videoURL completion:(void(^)(UIImage *image))completionBlock {
 	
 	AVAsset *asset = [[AVURLAsset alloc] initWithURL:videoURL options:nil];
-	NSArray *requestedKeys = @[@"playable"];
-	[asset loadValuesAsynchronouslyForKeys:requestedKeys completionHandler: ^{
 
+	AVAssetImageGenerator *ImgObj = [[AVAssetImageGenerator alloc] initWithAsset:asset];
+	NSError *error = NULL;
+	CMTime time = CMTimeMake(1, 65);
+	CGImageRef refImg = [ImgObj copyCGImageAtTime:time actualTime:NULL error:&error];
+	UIImage *finalImage= [[UIImage alloc] initWithCGImage:refImg];
+	
+	dispatch_async(dispatch_get_main_queue(), ^{
+		completionBlock(finalImage);
+	});
 
-		AVURLAsset *assetObj = [[AVURLAsset alloc] initWithURL:videoURL options:nil];
-		AVAssetImageGenerator *ImgObj = [[AVAssetImageGenerator alloc] initWithAsset:assetObj];
-		NSError *error = NULL;
-		CMTime time = CMTimeMake(1, 65);
-		CGImageRef refImg = [ImgObj copyCGImageAtTime:time actualTime:NULL error:&error];
-		NSLog(@"error==%@, Refimage==%@", error, refImg);
-		
-		UIImage *finalImage= [[UIImage alloc] initWithCGImage:refImg];
-		
-		dispatch_async(dispatch_get_main_queue(), ^{
-			completionBlock(finalImage);
-		});
-
-		
-	}];
 	
 }
 
