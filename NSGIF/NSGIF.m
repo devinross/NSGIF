@@ -99,7 +99,7 @@
 
 + (NSURL *) dr_createGIFforTimePoints:(NSArray *)timePoints URL:(NSURL *)url fileProperties:(NSDictionary *)fileProp frameProperties:(NSDictionary *)frameProp frames:(NSInteger)frameCount cropRect:(CGRect)cropRect scale:(CGFloat)scale outputSize:(CGSize)outputSize progress:(void(^)(NSInteger currentFrame, NSInteger total))progressBlock{
 	
-	NSString *timeEncodedFileName = [NSString stringWithFormat:@"%@-%lu.gif", fileName, (unsigned long)([[NSDate date] timeIntervalSince1970]*10.0)];
+	NSString *timeEncodedFileName = [NSString stringWithFormat:@"%@-%@x%@-%lu.gif", fileName,@(outputSize.width),@(outputSize.height), (unsigned long)([[NSDate date] timeIntervalSince1970]*10.0)];
 	NSString *temporaryFile = [NSTemporaryDirectory() stringByAppendingString:timeEncodedFileName];
 	NSURL *fileURL = [NSURL fileURLWithPath:temporaryFile];
 	if (fileURL == nil) return nil;
@@ -122,6 +122,9 @@
 		@autoreleasepool {
 			
 			CGImageRef imageRef = [generator copyCGImageAtTime:time.CMTimeValue actualTime:nil error:&error];
+			
+			TKLog(@"IMAGE WIDTH: %@",@(CGImageGetWidth(imageRef)));
+			
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
 				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
 			}
@@ -132,7 +135,8 @@
 			}
 			
 
-			
+			TKLog(@"OUTPUT WIDTH: %@",@(CGImageGetWidth(imageRef)));
+
 			if (error) {
 				NSLog(@"Error copying image: %@", error);
 			}
@@ -238,7 +242,12 @@ CGImageRef createImageAtSize(CGImageRef imageRef, CGSize newSize) {
 
 #pragma mark - Properties
 + (NSDictionary*) filePropertiesWithLoopCount:(NSInteger)loopCount {
-	NSDictionary *loop = @{(NSString *)kCGImagePropertyGIFLoopCount: @(loopCount)};
+	NSDictionary *loop = @{
+						   (NSString *)kCGImagePropertyGIFLoopCount: @(loopCount),
+						   (NSString *)kCGImagePropertyGIFHasGlobalColorMap : @NO
+						   
+						   
+						   };
 
     return @{(NSString *)kCGImagePropertyGIFDictionary : loop};
 }
