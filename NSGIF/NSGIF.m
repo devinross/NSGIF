@@ -123,7 +123,6 @@
 			
 			CGImageRef imageRef = [generator copyCGImageAtTime:time.CMTimeValue actualTime:nil error:&error];
 			
-			TKLog(@"IMAGE WIDTH: %@",@(CGImageGetWidth(imageRef)));
 			
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
 				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
@@ -135,7 +134,6 @@
 			}
 			
 
-			TKLog(@"OUTPUT WIDTH: %@",@(CGImageGetWidth(imageRef)));
 
 			if (error) {
 				NSLog(@"Error copying image: %@", error);
