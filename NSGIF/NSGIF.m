@@ -123,7 +123,9 @@
 			
 			CGImageRef imageRef = [generator copyCGImageAtTime:time.CMTimeValue actualTime:nil error:&error];
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
+				CGImageRef oldRef = imageRef;
 				imageRef = CGImageCreateWithImageInRect(imageRef, cropRect);
+				CFRelease(oldRef);
 			}
 			if(!CGSizeEqualToSize(CGSizeZero, outputSize)){
 				imageRef = createImageAtSize(imageRef,outputSize);
@@ -136,15 +138,15 @@
 			if (error) {
 				NSLog(@"Error copying image: %@", error);
 			}
-			if (imageRef) {
-				CGImageRelease(previousImageRefCopy);
-				previousImageRefCopy = CGImageCreateCopy(imageRef);
-			} else if (previousImageRefCopy) {
-				imageRef = CGImageCreateCopy(previousImageRefCopy);
-			} else {
-				NSLog(@"Error copying image and no previous frames to duplicate");
-				return nil;
-			}
+//			if (imageRef) {
+//				CGImageRelease(previousImageRefCopy);
+//				previousImageRefCopy = CGImageCreateCopy(imageRef);
+//			} else if (previousImageRefCopy) {
+//				imageRef = CGImageCreateCopy(previousImageRefCopy);
+//			} else {
+//				NSLog(@"Error copying image and no previous frames to duplicate");
+//				return nil;
+//			}
 			CGImageDestinationAddImage(destination, imageRef, (CFDictionaryRef)frameProp);
 			CGImageRelease(imageRef);
 	
