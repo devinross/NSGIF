@@ -123,6 +123,7 @@
 			
 			CGImageRef imageRef = [generator copyCGImageAtTime:time.CMTimeValue actualTime:nil error:&error];
 			
+			if(imageRef == nil) continue;
 			
 			if(!CGRectEqualToRect(CGRectZero, cropRect)){
 				CGImageRef oldRef = imageRef;
